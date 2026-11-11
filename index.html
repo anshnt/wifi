@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Home Wi-Fi Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Router, radio and client signal health for one home network, the fixes that matter, and a log of every action taken.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500;800&display=swap" rel="stylesheet">
+<style>
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Wayfind (deal 2/3, seed live-home-wi-fi-health-88e4·c585a699·2026-11-10·r0)
+ * nav: top bar, wordmark, two tab cells, live chip, one action · signature: the signal board, every client and its dBm in amber on ink · states: loading, empty, error, full, signed-out · wayfind: platform, night for dark
+ * axes: light/mono/cool · posture: committed · contrast: pass · modes: light+dark · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H5 E4 S5 R4 V4 · weakest: P, a health board can drift into a KPI wall; kept four figures, one board, two charts and the fix list */
+
+:root {
+  color-scheme: light;
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px; --space-4xl: 144px;
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem;
+  --text-display-s: 1.44rem; --text-display: 2.074rem; --text-section: 1.44rem; --text-title: 1rem; --text-lead: 1rem; --text-figure: 2.074rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.7, 0, 0.84, 0); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
+  --container: 1360px; --gutter: 40px; --gap-columns: 32px;
+  --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
+  --color-paper: oklch(95.5% 0.006 250); --color-paper-2: oklch(91% 0.009 250); --color-paper-3: oklch(99.5% 0.005 250);
+  --color-ink: oklch(16% 0.014 262); --color-ink-2: oklch(29% 0.014 262); --color-muted: oklch(47% 0.016 260);
+  --color-rule: oklch(80% 0.011 250); --color-ink-rule: oklch(34% 0.014 262);
+  --color-accent: oklch(51% 0.22 264); --color-accent-2: oklch(81% 0.16 82); --color-accent-ink: oklch(99.5% 0.003 250); --color-focus: oklch(51% 0.22 264);
+  --color-board: oklch(16% 0.014 262); --color-board-ink: oklch(95.5% 0.006 250); --color-board-muted: oklch(74% 0.012 255); --color-board-rule: oklch(34% 0.014 262);
+  --color-good: oklch(50% 0.12 150); --color-good-ink: oklch(99.5% 0.003 250);
+  --color-warn: oklch(81% 0.16 82); --color-warn-ink: oklch(16% 0.014 262);
+  --color-error: oklch(52% 0.19 27); --color-error-ink: oklch(99.5% 0.003 250);
+  --font-display: "Chivo Mono", ui-monospace, "Cascadia Mono", Consolas, monospace; --font-body: var(--font-display);
+  --radius-card: 0; --radius-pill: 999px; --rule-hair: 1px; --rule-bar: 2px;
+  --body-weight: 400; --display-weight: 800; --tracking-display: -0.03em;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-paper: oklch(15% 0.012 262); --color-paper-2: oklch(19% 0.013 262); --color-paper-3: oklch(22% 0.013 262);
+    --color-ink: oklch(95% 0.005 250); --color-ink-2: oklch(84% 0.008 252); --color-muted: oklch(70% 0.012 255);
+    --color-rule: oklch(31% 0.014 262); --color-ink-rule: oklch(36% 0.014 262);
+    --color-accent: oklch(68% 0.17 264); --color-accent-ink: oklch(15% 0.012 262); --color-focus: oklch(68% 0.17 264);
+    --color-board: oklch(10% 0.012 262); --color-board-ink: oklch(95% 0.005 250); --color-board-muted: oklch(72% 0.012 255); --color-board-rule: oklch(30% 0.014 262);
+    --color-good: oklch(70% 0.13 150); --color-good-ink: oklch(15% 0.012 262);
+    --color-error: oklch(68% 0.16 27); --color-error-ink: oklch(15% 0.012 262);
+    --body-weight: 350;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: oklch(15% 0.012 262); --color-paper-2: oklch(19% 0.013 262); --color-paper-3: oklch(22% 0.013 262);
+  --color-ink: oklch(95% 0.005 250); --color-ink-2: oklch(84% 0.008 252); --color-muted: oklch(70% 0.012 255);
+  --color-rule: oklch(31% 0.014 262); --color-ink-rule: oklch(36% 0.014 262);
+  --color-accent: oklch(68% 0.17 264); --color-accent-ink: oklch(15% 0.012 262); --color-focus: oklch(68% 0.17 264);
+  --color-board: oklch(10% 0.012 262); --color-board-ink: oklch(95% 0.005 250); --color-board-muted: oklch(72% 0.012 255); --color-board-rule: oklch(30% 0.014 262);
+  --color-good: oklch(70% 0.13 150); --color-good-ink: oklch(15% 0.012 262);
+  --color-error: oklch(68% 0.16 27); --color-error-ink: oklch(15% 0.012 262);
+  --body-weight: 350;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+html { scrollbar-color: var(--color-muted) var(--color-paper); }
+body { margin: 0; background: var(--color-paper); color: var(--color-ink); font-family: var(--font-body); font-size: var(--text-md); font-weight: var(--body-weight); line-height: 1.55; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; caret-color: var(--color-accent); }
+::selection { background: var(--color-accent-2); color: var(--color-warn-ink); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 0.16em; }
+h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: var(--display-weight); font-synthesis: none; letter-spacing: var(--tracking-display); line-height: 1.05; overflow-wrap: break-word; min-width: 0; text-wrap: balance; }
+h1 { max-width: 24ch; font-size: var(--text-display); }
+h2 { max-width: 30ch; font-size: var(--text-section); }
+h3 { max-width: 40ch; font-size: var(--text-title); line-height: 1.2; }
+p { margin: 0; text-wrap: pretty; }
+p:not([class]) { max-width: 65ch; }
+svg { display: block; }
+[hidden] { display: none !important; }
+button { font: inherit; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.wrap { width: 100%; max-width: var(--container); margin-inline: auto; padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px)); }
+
+/* the bar: ink plate across the top, tab cells joined edge to edge */
+.bar { background: var(--color-board); color: var(--color-board-ink); border-bottom: var(--rule-bar) solid var(--color-board-rule); }
+.bar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-lg); padding-block: var(--space-sm); }
+.mark { font-weight: 800; font-size: var(--text-md); letter-spacing: -0.02em; text-decoration: none; white-space: nowrap; }
+.tabs { display: flex; margin: 0; padding: 0; list-style: none; }
+.tabs a { display: inline-flex; align-items: center; min-height: 40px; padding-inline: var(--space-md); border: var(--rule-bar) solid var(--color-board-ink); font-weight: 500; font-size: var(--text-sm); text-decoration: none; white-space: nowrap; transition: background-color var(--dur-micro) steps(1), color var(--dur-micro) steps(1); }
+.tabs li + li a { border-left-width: 0; }
+.tabs a[aria-current="page"] { background: var(--color-board-ink); color: var(--color-board); }
+@media (hover: hover) { .tabs a:not([aria-current="page"]):hover { background: var(--color-board-rule); } }
+.tabs a:active { transform: translateY(1px); }
+.bar .tabs a:focus-visible, .bar .btn:focus-visible { outline-color: var(--color-accent-2); }
+.bar-end { display: flex; align-items: center; gap: var(--space-sm); margin-left: auto; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: var(--space-xs); min-height: 32px; padding-inline: var(--space-sm); border: var(--rule-hair) solid var(--color-board-rule); font-size: var(--text-sm); font-weight: 500; color: var(--color-board-muted); }
+.chip[data-state="live"] { color: var(--color-board-ink); border-color: var(--color-accent); }
+.chip[data-state="error"], .chip[data-state="signed-out"] { color: var(--color-board-ink); border-color: var(--color-accent-2); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-xs); min-height: 40px; padding-inline: var(--space-md); border: var(--rule-bar) solid currentColor; background: transparent; color: inherit; font-weight: 800; font-size: var(--text-sm); line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color var(--dur-micro) steps(1), color var(--dur-micro) steps(1); }
+.btn--primary { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-accent-ink); }
+@media (hover: hover) { .btn--primary:hover { background: var(--color-accent-ink); color: var(--color-accent); } .btn:not(.btn--primary):hover { background: var(--color-board-rule); } }
+.btn:active { transform: translateY(1px); }
+.btn:disabled, .btn[aria-busy="true"] { opacity: 0.55; cursor: not-allowed; }
+
+main { padding-block: var(--space-xl) var(--space-2xl); }
+.view { display: grid; gap: var(--space-2xl); }
+.head { display: grid; gap: var(--space-sm); }
+.head p { color: var(--color-muted); max-width: 70ch; }
+
+/* figures: sibling stats parted by 2px rules, a plate per figure */
+.figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border-top: var(--rule-bar) solid var(--color-ink); }
+.figures > div { display: grid; align-content: start; gap: var(--space-2xs); padding: var(--space-md) var(--space-md) var(--space-md) 0; }
+.figures > div + div { padding-left: var(--space-md); border-left: var(--rule-hair) solid var(--color-rule); }
+.figures dt { order: 2; font-size: var(--text-sm); font-weight: 500; color: var(--color-muted); max-width: 30ch; }
+.figures dd { order: 1; margin: 0; font-size: var(--text-figure); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; white-space: nowrap; }
+.figures dd small { font-size: var(--text-md); font-weight: 500; letter-spacing: 0; }
+
+/* the signal board: the signature, amber figures on ink */
+.board { background: var(--color-board); color: var(--color-board-ink); }
+.board .wrap { display: grid; gap: var(--space-lg); padding-block: var(--space-xl); }
+.board .head p { color: var(--color-board-muted); }
+.scroll { overflow-x: auto; min-width: 0; }
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+th { padding: var(--space-xs) var(--space-sm) var(--space-xs) 0; border-bottom: var(--rule-bar) solid currentColor; font-weight: 500; text-align: left; white-space: nowrap; }
+td { padding: var(--space-sm) var(--space-sm) var(--space-sm) 0; border-bottom: var(--rule-hair) solid var(--color-rule); vertical-align: top; }
+th:last-child, td:last-child { padding-right: 0; }
+.board td { border-bottom-color: var(--color-board-rule); vertical-align: middle; }
+.board th { color: var(--color-board-muted); border-bottom-color: var(--color-board-ink); }
+td.dbm { font-size: var(--text-2xl); font-weight: 800; color: var(--color-accent-2); letter-spacing: -0.03em; white-space: nowrap; }
+td.dbm small { font-size: var(--text-sm); font-weight: 500; color: var(--color-board-muted); letter-spacing: 0; }
+td.name { font-weight: 800; white-space: nowrap; }
+td.name small, td small.sub { display: block; font-weight: 400; color: var(--color-board-muted); }
+.num { text-align: right; white-space: nowrap; }
+.pill { display: inline-block; padding: var(--space-3xs) var(--space-xs); font-size: var(--text-xs); font-weight: 500; white-space: nowrap; border: var(--rule-hair) solid currentColor; }
+.pill[data-v="good"] { background: var(--color-good); color: var(--color-good-ink); border-color: var(--color-good); }
+.pill[data-v="fair"] { background: var(--color-warn); color: var(--color-warn-ink); border-color: var(--color-warn); }
+.pill[data-v="weak"] { background: var(--color-error); color: var(--color-error-ink); border-color: var(--color-error); }
+.pill[data-v="idle"] { color: inherit; }
+tr.late td { background: var(--color-accent-2); color: var(--color-warn-ink); }
+tr.late td small, tr.late td.dbm { color: var(--color-warn-ink); }
+.board-foot { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); font-size: var(--text-sm); color: var(--color-board-muted); }
+
+/* radios: two bordered panels of rows; charts beside them */
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-columns); }
+.panel { display: grid; align-content: start; gap: var(--space-md); padding: var(--space-lg); border: var(--rule-bar) solid var(--color-ink); background: var(--color-paper-3); min-width: 0; }
+.panel h3 { display: flex; justify-content: space-between; gap: var(--space-sm); font-size: var(--text-lg); max-width: none; }
+.rows { display: grid; margin: 0; }
+.rows > div { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); gap: var(--space-sm); padding-block: var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule); }
+.rows dt { color: var(--color-muted); font-size: var(--text-sm); font-weight: 500; }
+.rows dd { margin: 0; font-size: var(--text-sm); }
+.rows dd b { font-weight: 800; }
+.rows dd small { display: block; color: var(--color-muted); }
+
+figure { margin: 0; display: grid; gap: var(--space-sm); min-width: 0; }
+figcaption { font-size: var(--text-sm); color: var(--color-muted); max-width: 70ch; }
+.chart { width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--color-muted); font-family: var(--font-body); font-size: 12px; }
+.chart .grid { stroke: var(--color-rule); stroke-width: 1; }
+.chart .base { stroke: var(--color-ink); stroke-width: 2; }
+.chart .ours { fill: var(--color-accent); }
+.chart .them { fill: var(--color-muted); }
+.chart .renew { fill: var(--color-ink-2); }
+.chart .rejoin { fill: var(--color-accent); }
+.chart .label { fill: var(--color-ink); font-weight: 500; }
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); color: var(--color-muted); }
+.legend li { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.sw { display: inline-block; width: 12px; height: 12px; }
+.sw--ours, .sw--rejoin { background: var(--color-accent); }
+.sw--them { background: var(--color-muted); }
+.sw--renew { background: var(--color-ink-2); }
+
+.section { display: grid; gap: var(--space-lg); }
+.fixes td:first-child { font-weight: 800; white-space: nowrap; }
+.fixes td.what { font-weight: 800; min-width: 14rem; }
+.fixes td.why { color: var(--color-ink-2); min-width: 20rem; }
+.state { display: inline-block; padding: var(--space-3xs) var(--space-xs); font-size: var(--text-xs); font-weight: 500; white-space: nowrap; border: var(--rule-hair) solid currentColor; }
+.state[data-s="done"] { background: var(--color-good); color: var(--color-good-ink); border-color: var(--color-good); }
+.state[data-s="you"] { background: var(--color-accent-2); color: var(--color-warn-ink); border-color: var(--color-accent-2); }
+.state[data-s="later"] { color: var(--color-muted); }
+.state[data-s="no"] { color: var(--color-muted); }
+
+.traffic { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--gap-columns); align-items: end; }
+.spark { width: 100%; height: 64px; }
+.spark path.line { fill: none; stroke: var(--color-accent); stroke-width: 2; }
+.spark path.area { fill: var(--color-accent); opacity: 0.12; }
+.empty { font-size: var(--text-sm); color: var(--color-muted); }
+
+.log td.when { white-space: nowrap; font-weight: 500; }
+.log td.what { font-weight: 800; min-width: 16rem; }
+.log td.res { min-width: 18rem; color: var(--color-ink-2); }
+
+footer { border-top: var(--rule-bar) solid var(--color-ink); }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-sm) var(--space-xl); padding-block: var(--space-lg) var(--space-xl); font-size: var(--text-sm); color: var(--color-muted); }
+footer p { max-width: 70ch; }
+
+.flash { animation: flash var(--dur-micro) steps(1) 2; }
+@keyframes flash { 50% { background: var(--color-accent); color: var(--color-accent-ink); } }
+
+@media (max-width: 60rem) {
+  :root { --gutter: 24px; --text-figure: 1.728rem; }
+  .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .figures > div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .figures > div:nth-child(n+3) { border-top: var(--rule-hair) solid var(--color-rule); }
+  .split, .traffic { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 40rem) {
+  :root { --gutter: 16px; --text-display: 1.728rem; --gap-columns: 16px; }
+  .figures { grid-template-columns: minmax(0, 1fr); }
+  .figures > div, .figures > div + div { padding-left: 0; border-left: 0; }
+  .figures > div + div { border-top: var(--rule-hair) solid var(--color-rule); }
+  .rows > div { grid-template-columns: minmax(0, 1fr); gap: var(--space-3xs); }
+  .bar-end { margin-left: 0; }
+  .panel { padding: var(--space-md); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="mark" href="#board" aria-label="Home Wi-Fi board, start">Home Wi-Fi board</a>
+    <nav aria-label="Views">
+      <ul class="tabs">
+        <li><a href="#board" data-view="board" aria-current="page">Board</a></li>
+        <li><a href="#log" data-view="log">Work log</a></li>
+      </ul>
+    </nav>
+    <div class="bar-end">
+      <span class="chip" id="live-chip" role="status" data-state="snapshot">Snapshot, 11 Nov 2026 00:43 IST</span>
+      <button class="btn btn--primary" id="live-btn" type="button" hidden>Go live</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Board -->
+  <section class="view" id="board" aria-labelledby="board-title">
+    <div class="wrap section">
+      <div class="head">
+        <h1 id="board-title">Internet steady, coverage thin.</h1>
+        <p id="board-lede">The fiber line has not dropped in three days. The drops people feel come from weak 5 GHz signal and one device that keeps rejoining.</p>
+      </div>
+      <dl class="figures" id="figures">
+        <div><dt>Fiber link up, no WAN errors on 79 GB</dt><dd id="f-uptime">2d 22h</dd></div>
+        <div><dt>To the internet, 0% loss over 30 pings</dt><dd id="f-ping">7 <small>ms</small></dd></div>
+        <div><dt>Laptop link on 5 GHz, was 286 on 2.4 GHz</dt><dd id="f-link">1201 <small>Mbps</small></dd></div>
+        <div><dt id="f-weak-label">Weakest phone, at the edge of 5 GHz range</dt><dd id="f-weak">&minus;82 <small>dBm</small></dd></div>
+      </dl>
+    </div>
+
+    <div class="board" aria-labelledby="board-sig">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="board-sig">Who is on the air</h2>
+          <p id="sig-lede">Signal as the router hears each client. Above &minus;65 dBm is comfortable, below &minus;75 drops out.</p>
+        </div>
+        <div class="scroll">
+          <table id="sig-table">
+            <thead><tr><th scope="col">Device</th><th scope="col">Band</th><th scope="col" class="num">Signal</th><th scope="col">Reading</th><th scope="col" class="num">Rejoins, 10 h</th></tr></thead>
+            <tbody id="sig-rows">
+              <tr><td class="name">This laptop<small>Wi-Fi 6, 2x2</small></td><td>5 GHz<small class="sub">moved from 2.4 GHz</small></td><td class="dbm num">&minus;65 <small>dBm</small></td><td><span class="pill" data-v="good">Good</span></td><td class="num">1</td></tr>
+              <tr><td class="name">Phone A<small>private address</small></td><td>5 GHz</td><td class="dbm num">&minus;68 <small>dBm</small></td><td><span class="pill" data-v="fair">Fair</span></td><td class="num">3</td></tr>
+              <tr><td class="name">Phone B<small>private address</small></td><td>5 GHz</td><td class="dbm num">&minus;78 <small>dBm</small></td><td><span class="pill" data-v="weak">Weak</span></td><td class="num">1</td></tr>
+              <tr><td class="name">Phone C<small>private address</small></td><td>5 GHz</td><td class="dbm num">&minus;82 <small>dBm</small></td><td><span class="pill" data-v="weak">Weak</span></td><td class="num">1</td></tr>
+              <tr class="late"><td class="name">Device .7<small>not connected at the snapshot</small></td><td>unknown</td><td class="dbm num">none</td><td><span class="pill" data-v="idle">Rejoining</span></td><td class="num">24</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="board-foot">
+          <span id="sig-note">Laptop figure read on the laptop after the move; the phones as the router heard them.</span>
+          <span>14 devices hold an address; 4 were on Wi-Fi at the snapshot.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap section" aria-labelledby="radios-title">
+      <div class="head">
+        <h2 id="radios-title">Two radios, both on auto</h2>
+        <p>Both bands share one network name and the router steers clients to 5 GHz. Two settings ask for more than the router can give.</p>
+      </div>
+      <div class="split">
+        <div class="panel">
+          <h3><span>2.4 GHz</span><span id="r24-state">On</span></h3>
+          <dl class="rows">
+            <div><dt>Channel</dt><dd><b id="r24-ch">6</b> chosen automatically</dd></div>
+            <div><dt>Width</dt><dd><b id="r24-bw">20 MHz</b><small>Set to 40 MHz; neighbours on channel 1 hold it at 20.</small></dd></div>
+            <div><dt>Standard</dt><dd>Wi-Fi 6 with Wi-Fi 4 and 802.11g clients allowed</dd></div>
+            <div><dt>Transmit power</dt><dd>100%</dd></div>
+            <div><dt>Management frame protection</dt><dd>Off</dd></div>
+          </dl>
+          <figure>
+            <svg class="chart" viewBox="0 0 360 150" role="img" aria-label="2.4 GHz channel map: this network on channel 6 at full signal, two neighbouring networks on channel 1 at 45 and 30 percent">
+              <line class="grid" x1="24" y1="20" x2="352" y2="20"/>
+              <line class="grid" x1="24" y1="65" x2="352" y2="65"/>
+              <line class="base" x1="24" y1="110" x2="352" y2="110"/>
+              <text x="0" y="24">100</text><text x="6" y="69">50</text><text x="12" y="114">0</text>
+              <rect class="them" x="30" y="69.5" width="10" height="40.5"/>
+              <rect class="them" x="42" y="83" width="10" height="27"/>
+              <rect class="ours" x="174" y="20" width="16" height="90"/>
+              <text x="35" y="132">1</text><text x="65" y="132">2</text><text x="95" y="132">3</text><text x="125" y="132">4</text><text x="155" y="132">5</text>
+              <text class="label" x="178" y="132">6</text><text x="211" y="132">7</text><text x="241" y="132">8</text><text x="271" y="132">9</text><text x="297" y="132">10</text><text x="327" y="132">11</text>
+              <text x="140" y="148">channel</text>
+            </svg>
+            <ul class="legend"><li><span class="sw sw--ours" aria-hidden="true"></span>This network</li><li><span class="sw sw--them" aria-hidden="true"></span>Neighbours, signal % seen from the laptop</li></ul>
+            <figcaption>Channel 6 is clear. Both neighbours sit on channel 1, so staying on 6 at 20 MHz is right.</figcaption>
+          </figure>
+        </div>
+        <div class="panel">
+          <h3><span>5 GHz</span><span id="r5-state">On</span></h3>
+          <dl class="rows">
+            <div><dt>Channel</dt><dd><b id="r5-ch">36</b> chosen automatically<small>The router offers only 36 to 48.</small></dd></div>
+            <div><dt>Width</dt><dd><b id="r5-bw">80 MHz</b><small>Set to 160 MHz, which needs channels this router does not offer.</small></dd></div>
+            <div><dt>Standard</dt><dd>Wi-Fi 6</dd></div>
+            <div><dt>Transmit power</dt><dd>100%</dd></div>
+            <div><dt>Beamforming</dt><dd>On</dd></div>
+            <div><dt>Band steering</dt><dd>On, prefers 5 GHz</dd></div>
+            <div><dt>Management frame protection</dt><dd>Off</dd></div>
+          </dl>
+          <dl class="rows" aria-label="Router health">
+            <div><dt>Router CPU</dt><dd><b id="r-cpu">7%</b></dd></div>
+            <div><dt>Memory free</dt><dd><b id="r-mem">45%</b></dd></div>
+            <div><dt>Router up</dt><dd><b id="r-up">2 days 22 hours</b></dd></div>
+            <div><dt>Mesh</dt><dd>Controller on, no satellites joined</dd></div>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap section" aria-labelledby="traffic-title">
+      <div class="traffic">
+        <div class="head">
+          <h2 id="traffic-title">Traffic on the fiber</h2>
+          <p id="traffic-now">79 GB down and 4.9 GB up since the line came up. Go live to see the current rate.</p>
+        </div>
+        <figure>
+          <svg class="spark" id="spark" viewBox="0 0 300 64" preserveAspectRatio="none" role="img" aria-label="Download rate, last ten minutes"><path class="area" d=""/><path class="line" d=""/></svg>
+          <figcaption id="spark-cap">The live line draws here, one point every 30 seconds.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="wrap section" aria-labelledby="rejoin-title">
+      <div class="head">
+        <h2 id="rejoin-title">Device .7 keeps rejoining</h2>
+        <p>Address requests the router logged each hour. A renewal is routine; a full rejoin means the device fell off the network.</p>
+      </div>
+      <figure>
+        <svg class="chart" viewBox="0 0 640 210" role="img" aria-label="Rejoin events per hour from 15:00 to 00:00: 8, 0, 3, 6, 6, 4, 2, 0, 0, 7. Device .7 made 24 of the 36.">
+          <line class="grid" x1="36" y1="20" x2="632" y2="20"/>
+          <line class="grid" x1="36" y1="80" x2="632" y2="80"/>
+          <line class="grid" x1="36" y1="140" x2="632" y2="140"/>
+          <text x="10" y="24">8</text><text x="10" y="84">4</text><text x="10" y="164">0</text>
+          <line class="base" x1="36" y1="170" x2="632" y2="170"/>
+          <!-- 15h: 5 renew, 3 rejoin; scale 15px per event -->
+          <rect class="renew" x="48" y="95" width="24" height="75"/><rect class="rejoin" x="48" y="50" width="24" height="45"/>
+          <rect class="renew" x="168" y="140" width="24" height="30"/><rect class="rejoin" x="168" y="125" width="24" height="15"/>
+          <rect class="renew" x="228" y="95" width="24" height="75"/><rect class="rejoin" x="228" y="80" width="24" height="15"/>
+          <rect class="renew" x="288" y="80" width="24" height="90"/>
+          <rect class="renew" x="348" y="110" width="24" height="60"/>
+          <rect class="renew" x="408" y="140" width="24" height="30"/>
+          <rect class="renew" x="588" y="110" width="24" height="60"/><rect class="rejoin" x="588" y="65" width="24" height="45"/>
+          <text x="48" y="190">15</text><text x="108" y="190">16</text><text x="168" y="190">17</text><text x="228" y="190">18</text><text x="288" y="190">19</text><text x="348" y="190">20</text><text x="408" y="190">21</text><text x="468" y="190">22</text><text x="528" y="190">23</text><text x="588" y="190">00</text>
+          <text x="300" y="208">hour, 10 Nov to 11 Nov</text>
+        </svg>
+        <ul class="legend"><li><span class="sw sw--renew" aria-hidden="true"></span>Renewal</li><li><span class="sw sw--rejoin" aria-hidden="true"></span>Full rejoin</li></ul>
+        <figcaption>36 events in the 10 hours the router log holds; device .7 made 24 of them, 5 of those full rejoins. No fiber or login events in the same window.</figcaption>
+      </figure>
+    </div>
+
+    <div class="wrap section" aria-labelledby="fix-title">
+      <div class="head">
+        <h2 id="fix-title">What to change</h2>
+        <p>Ordered by effect on drops and speed. Checked by three independent reviews against the readings above.</p>
+      </div>
+      <div class="scroll">
+        <table class="fixes">
+          <thead><tr><th scope="col">#</th><th scope="col">Change</th><th scope="col">Why</th><th scope="col">State</th></tr></thead>
+          <tbody id="fix-rows">
+            <tr><td>1</td><td class="what">Fix coverage where the phones are</td><td class="why">Three phones read &minus;68, &minus;78 and &minus;82 dBm on 5 GHz and power is already 100%. Move the router central and raised (ask Airtel to re-route the fiber) or add an Airtel Coverage+ satellite.</td><td><span class="state" data-s="you">Your call</span></td></tr>
+            <tr><td>2</td><td class="what">Find device .7</td><td class="why">24 of 36 rejoin events. Fixed hardware address, so likely a TV, printer or smart device; move it closer or update it.</td><td><span class="state" data-s="you">Your call</span></td></tr>
+            <tr><td>3</td><td class="what">Band steering off, 24 h test</td><td class="why">Steering may hold weak phones on 5 GHz and bounce device .7 between bands. Keep it off if rejoins drop.</td><td><span class="state" data-s="later">Awaiting approval</span></td></tr>
+            <tr><td>4</td><td class="what">Find why the router restarted</td><td class="why">Router and fiber uptime match at 2d 22h. If it was a power cut, a small DC UPS prevents more downtime than any setting.</td><td><span class="state" data-s="you">Your call</span></td></tr>
+            <tr><td>5</td><td class="what">Keep the laptop on 5 GHz</td><td class="why">Download 157 to 174 Mbps against 90 to 100 on 2.4 GHz. Upload measured lower; re-test if uploads matter.</td><td><span class="state" data-s="done">Done</span></td></tr>
+            <tr><td>6</td><td class="what">Set widths to 20 and 80 MHz</td><td class="why">Tidy-up only, no speed change: stops 20/40 re-scanning and a future jump to radar channels.</td><td><span class="state" data-s="later">Awaiting approval</span></td></tr>
+            <tr><td>7</td><td class="what">Change a factory Wi-Fi password</td><td class="why">Airtel default passwords are predictable (CVE-2025-1081). Optional: management frame protection on Optional.</td><td><span class="state" data-s="you">Your call</span></td></tr>
+            <tr><td>8</td><td class="what">Leave DNS, channel 6, QoS alone</td><td class="why">All resolvers 8 to 10 ms, channel 6 is clear, no wired test shows QoS costing speed.</td><td><span class="state" data-s="no">No change</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="wrap section" aria-labelledby="test-title">
+      <div class="head">
+        <h2 id="test-title">Measured on this laptop</h2>
+        <p>Same spot, before and after the move to 5 GHz. Single-stream speed tests swing a lot; read them as ranges.</p>
+      </div>
+      <div class="split">
+        <div class="scroll">
+          <table>
+            <thead><tr><th scope="col">Test</th><th scope="col" class="num">2.4 GHz, before</th><th scope="col" class="num">5 GHz, after</th></tr></thead>
+            <tbody>
+              <tr><td>Link rate</td><td class="num">286 Mbps</td><td class="num">1201 Mbps</td></tr>
+              <tr><td>Signal at the laptop</td><td class="num">&minus;56 dBm</td><td class="num">&minus;65 dBm</td></tr>
+              <tr><td>Download, one stream</td><td class="num">90 to 100 Mbps</td><td class="num">68 to 155 Mbps</td></tr>
+              <tr><td>Upload, one stream</td><td class="num">about 80 Mbps</td><td class="num" id="t-up5">33 to 36 Mbps</td></tr>
+              <tr><td>Ping to router, average</td><td class="num">4.2 ms</td><td class="num">4 ms</td></tr>
+              <tr><td>Ping to internet, average</td><td class="num">8.1 ms</td><td class="num">7 ms</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th scope="col">Name lookup</th><th scope="col" class="num">Median, 10 sites</th></tr></thead>
+            <tbody>
+              <tr><td>Router (current)</td><td class="num">8 ms</td></tr>
+              <tr><td>Provider DNS</td><td class="num">8 ms</td></tr>
+              <tr><td>Cloudflare 1.1.1.1</td><td class="num">8 ms</td></tr>
+              <tr><td>Google 8.8.8.8</td><td class="num">10 ms</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Work log -->
+  <section class="view" id="log" aria-labelledby="log-title">
+    <div class="wrap section">
+      <div class="head">
+        <h1 id="log-title">Work log</h1>
+        <p>Every action taken on the router, the laptop and the repository, in order. Times are IST on 11 Nov 2026.</p>
+      </div>
+      <div class="scroll">
+        <table class="log">
+          <thead><tr><th scope="col">Time</th><th scope="col">Action</th><th scope="col">Result</th><th scope="col">State</th></tr></thead>
+          <tbody id="log-rows">
+            <tr><td class="when">00:36</td><td class="what">Opened the router admin page</td><td class="res">You signed in; read status, Wi-Fi, LAN, QoS, firewall, mesh and log pages. Nothing changed on the router.</td><td><span class="state" data-s="done">Done</span></td></tr>
+            <tr><td class="when">00:40</td><td class="what">Scanned Wi-Fi from the laptop</td><td class="res">Laptop on 2.4 GHz channel 6 at 286 Mbps; two neighbours on channel 1; 5 GHz on 36 available.</td><td><span class="state" data-s="done">Done</span></td></tr>
+            <tr><td class="when">00:42</td><td class="what">Latency, loss and DNS tests</td><td class="res">7 to 8 ms to the internet, 0% loss; every resolver 8 to 10 ms.</td><td><span class="state" data-s="done">Done</span></td></tr>
+            <tr><td class="when">00:44</td><td class="what">Parsed the router log</td><td class="res">36 rejoin events in 10 h, 24 from device .7. No fiber events.</td><td><span class="state" data-s="done">Done</span></td></tr>
+            <tr><td class="when">00:46</td><td class="what">Reconnected the laptop Wi-Fi</td><td class="res">Moved to 5 GHz: link 1201 Mbps, download 157 to 174 Mbps.</td><td><span class="state" data-s="done">Done</span></td></tr>
+            <tr><td class="when">00:52</td><td class="what">Checked every recommendation</td><td class="res">One research pass and three independent reviews; advice revised where data was thin.</td><td><span class="state" data-s="done">Done</span></td></tr>
+            <tr><td class="when">01:05</td><td class="what">Read the laptop's Wi-Fi history</td><td class="res">No unplanned drops in 4 days; every disconnect matched sleep.</td><td><span class="state" data-s="done">Done</span></td></tr>
+            <tr><td class="when">pending</td><td class="what">Router changes 3 and 6</td><td class="res">Waiting for your go-ahead and a fresh router sign-in.</td><td><span class="state" data-s="you">Waiting on you</span></td></tr>
+            <tr><td class="when">today</td><td class="what">Published this board</td><td class="res">Repository anshnt/wifi, GitHub Pages copy with identifiers removed.</td><td><span class="state" data-s="done">Done</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Built from the router's own status pages and tests run on one laptop. Network names, addresses and hardware IDs are left out of the public copy.</p>
+    <p><a href="https://github.com/anshnt/wifi">Source on GitHub</a></p>
+  </div>
+</footer>
+
+<script id="parsers">
+// Pure text parsers for the router pages, as Claude's browser returns them. Tested by test/parse.test.mjs.
+function pageBody(raw) {
+  const s = String(raw || '');
+  const i = s.indexOf('\n---\n');
+  let body = i >= 0 ? s.slice(i + 5) : s;
+  const j = body.indexOf('\nTab Context:');
+  return j >= 0 ? body.slice(0, j) : body;
+}
+function signedOut(t) { return /enter username and password/i.test(t); }
+function parseUptime(s) {
+  if (!s) return null;
+  const n = (re) => { const m = s.match(re); return m ? +m[1] : 0; };
+  return { d: n(/(\d+)\s*day/), h: n(/(\d+)\s*hour/), m: n(/(\d+)\s*min/) };
+}
+function parseStatus(t) {
+  const g = (re, src) => { const m = (src || t).match(re); return m ? m[1].trim() : null; };
+  const i24 = t.indexOf('2.4G WLAN Information'), i5 = t.indexOf('5G WLAN Information'), iFw = t.indexOf('Firewall Status');
+  const sec24 = i24 >= 0 ? t.slice(i24, i5 > i24 ? i5 : undefined) : '';
+  const sec5 = i5 >= 0 ? t.slice(i5, iFw > i5 ? iFw : undefined) : '';
+  const radio = (sec) => sec ? { on: g(/Status:\s*(\w+)/, sec), ch: g(/Channel:\s*(\d+)/, sec), bw: g(/Operating Bandwidth:\s*(\d+)\s*MHz/, sec) } : null;
+  const cpu = g(/CPU Usage:\s*(\d+)\s*%/), mem = g(/Memory Free:\s*(\d+)\s*%/);
+  return {
+    up: parseUptime(g(/System Uptime:\s*([^\n]+)/)),
+    ppp: parseUptime(g(/PPPoE UpTime:\s*([^\n]+)/)),
+    cpu: cpu == null ? null : +cpu,
+    mem: mem == null ? null : +mem,
+    wan: g(/WAN Link Status\s*:\s*(\w+)/),
+    pppState: g(/PPPoE Connection Status\s*:\s*(\w+)/),
+    r24: radio(sec24),
+    r5: radio(sec5),
+  };
+}
+function parseStations(t) {
+  const out = [];
+  for (const m of String(t).matchAll(/([0-9a-f]{2}(?::[0-9a-f]{2}){5})\D{0,6}?(-\d{2,3})/gi)) out.push({ mac: m[1].toUpperCase(), rssi: +m[2] });
+  return out;
+}
+function parseWan(t) {
+  const m = String(t).match(/PPPoE\s+(\d+:\d+:\d+:\s?\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+  return m ? { txBytes: +m[4], rxBytes: +m[7], errors: +m[3] + +m[6] } : null;
+}
+function parseLog(t) {
+  const per = {};
+  let total = 0, first = null, last = null;
+  for (const m of String(t).matchAll(/([A-Z][a-z]{2}\s+\d+\s+\d\d:\d\d:\d\d)\s+\w+\s+received (REQUEST|DISCOVER)[\s\S]{0,80}?Mac\s+([0-9A-F:]{17})/gi)) {
+    const mac = m[3].toUpperCase();
+    per[mac] = per[mac] || { renew: 0, rejoin: 0 };
+    per[mac][m[2].toUpperCase() === 'DISCOVER' ? 'rejoin' : 'renew']++;
+    total++;
+    first = first || m[1]; last = m[1];
+  }
+  return { per, total, first, last };
+}
+function reading(rssi) { return rssi >= -65 ? 'good' : rssi >= -74 ? 'fair' : 'weak'; }
+</script>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+
+  // views, routed on the hash
+  const views = ['board', 'log'];
+  function show() {
+    const v = views.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'board';
+    views.forEach((id) => { $(id).hidden = id !== v; });
+    document.querySelectorAll('.tabs a').forEach((a) => {
+      if (a.dataset.view === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+  }
+  window.addEventListener('hashchange', show);
+  show();
+
+  // live mode: only inside the Claude app, through its own browser, while you are signed in to the router there
+  const HOST = 'host:claude_browser';
+  const BASE = 'http://192.168.1.1/cgi-bin/';
+  const EVERY = 30000;
+  const chip = $('live-chip'), btn = $('live-btn');
+  let mcp = null, tabId = null, live = false, timer = 0, n = 0, prev = null, log = null;
+  const series = [];
+
+  function setChip(state, text) { chip.dataset.state = state; chip.textContent = text; }
+  const textOf = (r) => (r && r.content ? r.content.filter((c) => c.type === 'text').map((c) => c.text).join('\n') : String((r && r.payload) || ''));
+  const fmtUp = (u) => (u ? `${u.d}d ${u.h}h` : null);
+  const clock = () => new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+  async function read(page) {
+    await mcp.callTool(HOST, 'navigate', { tabId, url: BASE + page });
+    return pageBody(textOf(await mcp.callTool(HOST, 'get_page_text', { tabId, max_chars: 40000 })));
+  }
+
+  function cell(tag, cls, html) { const el = document.createElement(tag); if (cls) el.className = cls; el.innerHTML = html; return el; }
+  function rowsFor(list, band) {
+    return list.map((s) => {
+      const tr = document.createElement('tr');
+      const v = reading(s.rssi);
+      const ev = log && log.per[s.mac];
+      tr.append(
+        cell('td', 'name', `Ends ${s.mac.slice(-5)}<small>${band === '2.4' ? '2.4 GHz client' : '5 GHz client'}</small>`),
+        cell('td', '', `${band} GHz`),
+        cell('td', 'dbm num', `&minus;${Math.abs(s.rssi)} <small>dBm</small>`),
+        cell('td', '', `<span class="pill" data-v="${v}">${v === 'good' ? 'Good' : v === 'fair' ? 'Fair' : 'Weak'}</span>`),
+        cell('td', 'num', ev ? String(ev.renew + ev.rejoin) : '0'),
+      );
+      return tr;
+    });
+  }
+
+  function drawSpark() {
+    const svg = $('spark');
+    const pts = series.slice(-20);
+    if (pts.length < 2) return;
+    const max = Math.max(10, ...pts);
+    const xy = pts.map((v, i) => [(i / (pts.length - 1)) * 300, 62 - (v / max) * 58]);
+    const line = xy.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    svg.querySelector('.line').setAttribute('d', line);
+    svg.querySelector('.area').setAttribute('d', line + ' L300 64 L0 64 Z');
+    $('spark-cap').textContent = `Download rate, last ${pts.length} readings, peak ${Math.round(max)} Mbps on this scale.`;
+  }
+
+  async function tick() {
+    timer = 0;
+    if (!live) return;
+    if (document.hidden) { timer = setTimeout(tick, EVERY); return; }
+    try {
+      const st = await read('naviView_partialLoad.cgi');
+      if (signedOut(st)) { setChip('signed-out', 'Router signed out. Sign in at 192.168.1.1 in Claude’s browser, then Go live.'); stop(); return; }
+      const s = parseStatus(st);
+      const s24 = parseStations(await read('wlan_staionInfo_list.cgi'));
+      const s5 = parseStations(await read('wlan5_staionInfo_list.cgi'));
+      const wan = parseWan(await read('traffic_wan_frame2.cgi'));
+      if (n % 4 === 0) log = parseLog(await read('ViewSyslog.cgi'));
+      n++;
+
+      if (s.ppp) $('f-uptime').textContent = fmtUp(s.ppp);
+      if (s.up) $('r-up').textContent = `${s.up.d} days ${s.up.h} hours`;
+      if (s.cpu != null) $('r-cpu').textContent = s.cpu + '%';
+      if (s.mem != null) $('r-mem').textContent = s.mem + '%';
+      if (s.r24) { $('r24-ch').textContent = s.r24.ch || '?'; $('r24-bw').textContent = (s.r24.bw || '?') + ' MHz'; $('r24-state').textContent = s.r24.on || ''; }
+      if (s.r5) { $('r5-ch').textContent = s.r5.ch || '?'; $('r5-bw').textContent = (s.r5.bw || '?') + ' MHz'; $('r5-state').textContent = s.r5.on || ''; }
+
+      const all = rowsFor(s5, '5').concat(rowsFor(s24, '2.4'));
+      const body = $('sig-rows');
+      if (all.length) body.replaceChildren(...all);
+      else body.replaceChildren(cell('tr', '', '<td colspan="5">No Wi-Fi clients connected right now. Devices show here as soon as they join.</td>'));
+      $('sig-note').textContent = `Live from the router at ${clock()}. Devices are named by the last digits of their address.`;
+      const weakest = [...s24, ...s5].sort((a, b) => a.rssi - b.rssi)[0];
+      if (weakest) { $('f-weak').innerHTML = `&minus;${Math.abs(weakest.rssi)} <small>dBm</small>`; $('f-weak-label').textContent = `Weakest client now, ${reading(weakest.rssi)}`; }
+
+      if (wan) {
+        const now = performance.now();
+        if (prev && wan.rxBytes >= prev.rx) {
+          const sec = (now - prev.t) / 1000;
+          const down = ((wan.rxBytes - prev.rx) * 8) / sec / 1e6, up = ((wan.txBytes - prev.tx) * 8) / sec / 1e6;
+          series.push(down);
+          $('traffic-now').textContent = `Now ${down.toFixed(1)} Mbps down and ${up.toFixed(1)} Mbps up, averaged over the last ${Math.round(sec)} seconds.`;
+          drawSpark();
+        } else {
+          $('traffic-now').textContent = `${(wan.rxBytes / 1e9).toFixed(1)} GB down and ${(wan.txBytes / 1e9).toFixed(1)} GB up so far. The rate shows after the next reading.`;
+        }
+        prev = { t: now, rx: wan.rxBytes, tx: wan.txBytes };
+      }
+      setChip('live', `Live, updated ${clock()}`);
+      chip.classList.remove('flash'); void chip.offsetWidth; chip.classList.add('flash');
+    } catch (e) {
+      if (!handle(e)) return;
+    }
+    if (live) timer = setTimeout(tick, EVERY);
+  }
+
+  // returns true when polling should continue
+  function handle(e) {
+    const code = (e && e.code) || 'upstream_error';
+    if (code === 'server_unavailable') { setChip('error', 'Claude’s browser did not answer. Trying again in 30 seconds.'); return true; }
+    if (code === 'tool_error') { tabId = null; setChip('error', 'The router tab closed or failed to load. Go live again to reopen it.'); stop(); return false; }
+    if (code === 'server_not_connected') { setChip('error', 'Live view runs in the Claude desktop app, with its browser.'); stop(); btn.hidden = true; return false; }
+    if (code === 'not_in_manifest' || code === 'cancelled' || code === 'approval_required') { setChip('error', 'Browser access was not allowed for this page. Go live to ask again.'); stop(); return false; }
+    if (code === 'needs_reauth' || code === 'blocked_by_policy') { setChip('error', 'Browser access is blocked here. Check the page permissions.'); stop(); return false; }
+    setChip('error', 'Live update failed. Showing the last good reading.'); stop(); return false;
+  }
+
+  function stop() { live = false; clearTimeout(timer); timer = 0; btn.textContent = 'Go live'; btn.removeAttribute('aria-busy'); btn.disabled = false; }
+
+  async function start() {
+    btn.disabled = true; btn.setAttribute('aria-busy', 'true'); setChip('loading', 'Opening the router in Claude’s browser');
+    try {
+      if (!tabId) {
+        const r = textOf(await mcp.callTool(HOST, 'preview_start', { url: BASE + 'naviView_partialLoad.cgi' }));
+        const m = r.match(/"tabId"\s*:\s*"([^"]+)"/);
+        if (!m) { setChip('error', 'Claude’s browser opened no tab. Try Go live again.'); stop(); return; }
+        tabId = m[1];
+      }
+      live = true; n = 0; prev = null;
+      btn.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = 'Pause';
+      tick();
+    } catch (e) { handle(e); }
+  }
+
+  btn.addEventListener('click', () => { if (live) { stop(); setChip('snapshot', 'Paused. The last reading stays on screen.'); } else start(); });
+
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('mcp').then((m) => { if (m) { mcp = m; btn.hidden = false; } }).catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
